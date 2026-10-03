@@ -57,7 +57,21 @@ services:
       - "3002:3002"
     depends_on:
       - mongo
-
+  api-gateway:
+    build:
+      context: ./api-gateway
+    container_name: api-gateway
+    environment:
+      PORT: 3000
+      PRODUCT_SERVICE_URL: http://product-service:3001
+      ORDER_SERVICE_URL: http://order-service:3002
+      ALLOWED_ORIGINS: "*"
+    ports:
+      - "3000:3000"
+    depends_on:
+      - product-service
+      - order-service
+      
 volumes:
   postgres_data:
   mongo_data:

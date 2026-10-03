@@ -49,8 +49,9 @@ app.use(
 app.use(
   "/api/orders",
   createProxyMiddleware({
-    target: process.env.ORDER_SERVICE_URL,
+    target: `${process.env.ORDER_SERVICE_URL}/api/orders`,
     changeOrigin: true,
+    
     on: {
       error: (err, req, res) =>
         res.status(503).json({
