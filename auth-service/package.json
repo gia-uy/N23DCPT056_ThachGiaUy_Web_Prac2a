@@ -1,23 +1,24 @@
 {
-  "name": "api-gateway",
+  "name": "auth-service",
   "version": "1.0.0",
   "description": "",
   "main": "index.js",
   "scripts": {
-    "start": "node src/index.js",
-    "dev": "node src/index.js"
-  },
+  "start": "node src/app.js",
+  "postinstall": "prisma skills sync || exit 0"
+},
   "keywords": [],
   "author": "",
   "license": "ISC",
   "type": "commonjs",
   "dependencies": {
-    "cors": "^2.8.6",
+    "@prisma/client": "^6.19.3",
+    "bcryptjs": "^3.0.3",
     "dotenv": "^18.0.5",
     "express": "^5.2.1",
-    "express-rate-limit": "^8.7.0",
-    "helmet": "^8.3.0",
-    "http-proxy-middleware": "^4.2.0",
     "jsonwebtoken": "^9.0.3"
+  },
+  "devDependencies": {
+    "prisma": "^6.19.3"
   }
 }

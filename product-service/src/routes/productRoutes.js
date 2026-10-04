@@ -6,9 +6,11 @@ const {
   createProduct,
   updateProduct,
   deleteProduct,
+  uploadProductImage,
 } = require("../controllers/productController");
 
 const { productValidation, validate } = require("../middleware/validate");
+const upload = require("../middleware/upload");
 
 const router = express.Router();
 
@@ -61,6 +63,8 @@ const router = express.Router();
  *         description: Lấy danh sách sản phẩm thành công
  */
 router.get("/", getProducts);
+
+router.post("/:id/image", upload.single("image"), uploadProductImage);
 
 /**
  * @swagger

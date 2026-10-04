@@ -1,11 +1,29 @@
 const prisma = require("../config/prisma");
+const redis = require("../config/redis");
 
-// ──────────────────────────────────
+// Xóa toàn bộ cache danh sách sản phẩm
+const clearProductCache = async () => {
+  const keys = await redis.keys("products:*");
+
+  if (keys.length > 0) {
+    await redis.del(...keys);
+  }
+};
+
+
 // GET /api/products
 // Lấy danh sách sản phẩm có phân trang, lọc, sắp xếp
-// ──────────────────────────────────
+
 const getProducts = async (req, res, next) => {
   try {
+    const cacheKey = `products:${JSON.stringify(req.query)}`;
+
+    const cachedData = await redis.get(cacheKey);
+
+    if (cachedData) {
+      return res.json(JSON.parse(cachedData));
+    }
+
     const {
       page = 1,
       limit = 10,
@@ -20,7 +38,6 @@ const getProducts = async (req, res, next) => {
 
     const skip = (parseInt(page) - 1) * parseInt(limit);
 
-    // Điều kiện lọc
     const where = {
       isActive: true,
 
@@ -76,7 +93,7 @@ const getProducts = async (req, res, next) => {
       }),
     ]);
 
-    res.json({
+    const result = {
       success: true,
       data: products,
       pagination: {
@@ -85,16 +102,20 @@ const getProducts = async (req, res, next) => {
         limit: parseInt(limit),
         totalPages: Math.ceil(total / parseInt(limit)),
       },
-    });
+    };
+
+    await redis.setex(cacheKey, 300, JSON.stringify(result));
+
+    res.json(result);
   } catch (error) {
     next(error);
   }
 };
 
-// ──────────────────────────────────
+
 // GET /api/products/:id
 // Lấy thông tin một sản phẩm theo ID
-// ──────────────────────────────────
+
 const getProductById = async (req, res, next) => {
   try {
     const product = await prisma.product.findUnique({
@@ -121,10 +142,11 @@ const getProductById = async (req, res, next) => {
     next(error);
   }
 };
-// ──────────────────────────────────
+
+
 // POST /api/products
 // Tạo sản phẩm mới
-// ──────────────────────────────────
+
 const createProduct = async (req, res, next) => {
   try {
     const {
@@ -156,6 +178,8 @@ const createProduct = async (req, res, next) => {
       },
     });
 
+    await clearProductCache();
+
     res.status(201).json({
       success: true,
       data: product,
@@ -166,10 +190,10 @@ const createProduct = async (req, res, next) => {
   }
 };
 
-// ──────────────────────────────────
+
 // PUT /api/products/:id
 // Cập nhật sản phẩm
-// ──────────────────────────────────
+
 const updateProduct = async (req, res, next) => {
   try {
     const product = await prisma.product.update({
@@ -182,6 +206,8 @@ const updateProduct = async (req, res, next) => {
       },
     });
 
+    await clearProductCache();
+
     res.json({
       success: true,
       data: product,
@@ -192,10 +218,10 @@ const updateProduct = async (req, res, next) => {
   }
 };
 
-// ──────────────────────────────────
+
 // DELETE /api/products/:id
 // Xóa mềm sản phẩm
-// ──────────────────────────────────
+
 const deleteProduct = async (req, res, next) => {
   try {
     await prisma.product.update({
@@ -207,9 +233,51 @@ const deleteProduct = async (req, res, next) => {
       },
     });
 
+    await clearProductCache();
+
     res.json({
       success: true,
       message: "Đã ẩn sản phẩm thành công",
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+
+// POST /api/products/:id/image
+// Upload ảnh sản phẩm lên Cloudinary
+
+const uploadProductImage = async (req, res, next) => {
+  try {
+    const productId = parseInt(req.params.id);
+
+    if (!req.file) {
+      return res.status(400).json({
+        success: false,
+        message: "Vui lòng chọn ảnh",
+      });
+    }
+
+    const product = await prisma.product.update({
+      where: {
+        id: productId,
+      },
+      data: {
+        imageUrl: req.file.path,
+      },
+      include: {
+        category: true,
+      },
+    });
+
+
+    await clearProductCache();
+
+    res.json({
+      success: true,
+      data: product,
+      message: "Upload ảnh sản phẩm thành công",
     });
   } catch (error) {
     next(error);
@@ -222,4 +290,5 @@ module.exports = {
   createProduct,
   updateProduct,
   deleteProduct,
+  uploadProductImage,
 };

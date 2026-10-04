@@ -3,6 +3,7 @@ const { createProxyMiddleware } = require("http-proxy-middleware");
 const rateLimit = require("express-rate-limit");
 const cors = require("cors");
 const helmet = require("helmet");
+const authMiddleware = require("./middleware/auth");
 require("dotenv").config();
 
 const app = express();
@@ -48,6 +49,7 @@ app.use(
 
 app.use(
   "/api/orders",
+  authMiddleware,
   createProxyMiddleware({
     target: `${process.env.ORDER_SERVICE_URL}/api/orders`,
     changeOrigin: true,
